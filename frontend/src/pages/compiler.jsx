@@ -177,7 +177,7 @@ function Compiler() {
           </button>
         </div>
 
-        <div className="flex-1 mt-2 p-2  whitespace-pre-wrap font-mono  text-sm font-mono overflow-auto no-scrollbar rounded">
+        <div className="flex-1 mt-2 p-2  whitespace-pre-wrap font-mono  text-sm  overflow-auto no-scrollbar rounded">
           {output || "Output will appear here..."}
         </div>
         {/* Input Area */}
