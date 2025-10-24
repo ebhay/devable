@@ -195,7 +195,7 @@ function Compiler() {
 
           <textarea
             className="flex-1 mt-2 p-2 border border-gray-500  whitespace-pre-wrap font-mono text-sm overflow-auto no-scrollbar focus:outline-none"
-            placeholder="Enter your input here..."
+            placeholder="Enter your input here... before running the code."
             value={input}
             onChange={(e) => setInput(e.target.value)}
           />
