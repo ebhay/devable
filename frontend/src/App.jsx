@@ -10,17 +10,15 @@ function App() {
   const [lang, setlang] = useState("python3");
 
   return (
-    <div className="flex flex-col">
+    <div className="flex flex-col min-h-screen">
       <BrowserRouter>
-        <div className="flex-1">
-          <Navbar />
-        </div>
-        <div>
+        <Navbar />
+        <div className="pt-16">
           <Routes>
             <Route
               path="/"
               element={
-                <div className="flex-1">
+                <div>
                   <Landing />
                   <Landing />
                   <Landing />

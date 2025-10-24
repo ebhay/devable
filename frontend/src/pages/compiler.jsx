@@ -28,7 +28,6 @@ function Compiler() {
   const [code, setCode] = React.useState("");
   const [output, setOutput] = React.useState("");
 
-  // Export code as main.{ext}
   const handleExport = () => {
     if (!code.trim()) {
       alert("Code is empty. Write something before exporting!");
@@ -43,13 +42,76 @@ function Compiler() {
     URL.revokeObjectURL(url);
   };
 
-  // Clear output
   const handleClear = () => setOutput("");
+  const [input, setInput] = React.useState("");
+  React.useEffect(() => {
+    // Clear input automatically when output is cleared
+    if (output === "") setInput("");
+  }, [output]);
+  const codeRunner = async () => {
+    if (!code.trim()) {
+      alert("Please write some code before running!");
+      return;
+    }
+
+    setOutput("Running...");
+
+    // handle language mapping internally (without changing your array)
+    const langMap = {
+      Java: "java",
+      Python3: "python",
+      C: "c",
+      "C++": "cpp",
+      JavaScript: "javascript",
+      TypeScript: "typescript",
+      "C#": "csharp",
+      Go: "go",
+      Rust: "rust",
+    };
+
+    const apiLang = langMap[language] || language.toLowerCase();
+
+    try {
+      const response = await fetch("https://emkc.org/api/v2/piston/execute", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          language: apiLang,
+          version: "*",
+          files: [
+            {
+              name: `main.${ext}`,
+              content: code,
+            },
+          ],
+          stdin: input,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (result.run && result.run.output) {
+        setOutput(result.run.output);
+      } else {
+        setOutput("No output or execution failed.");
+      }
+    } catch (error) {
+      console.error(error);
+      setOutput("Error: " + error.message);
+    }
+  };
 
   return (
-    <div className="mt-16 p-10 flex h-screen overflow-hidden ">
+    <div
+      className="
+        flex 
+        h-[calc(100vh-64px)]   /* adjust if navbar height differs */
+        overflow-hidden 
+        
+      "
+    >
       {/* Sidebar */}
-      <div className="w-20 bg-gray-100 h-full p-2 flex flex-col items-center space-y-2 overflow-y-auto no-scrollbar">
+      <div className="w-20 p-2 flex flex-col items-center space-y-2 overflow-y-auto no-scrollbar  border-r ">
         {coreLanguages.map((langItem) => (
           <button
             key={langItem.name}
@@ -58,9 +120,12 @@ function Compiler() {
               setExt(langItem.ext);
             }}
             title={langItem.name}
-            className={`w-full flex justify-center items-center py-2 border
-              ${language === langItem.name ? "bg-blue-700 font-bold" : "bg-white hover:bg-blue-200"}
-            `}
+            className={`w-full flex justify-center items-center py-2 border transition
+              ${
+                language === langItem.name
+                  ? "bg-blue-700 text-white font-semibold"
+                  : "hover:bg-blue-200"
+              }`}
           >
             {langItem.icon}
           </button>
@@ -68,39 +133,72 @@ function Compiler() {
       </div>
 
       {/* Compiler Area */}
-      <div className="flex-1  h-full p-3 flex flex-col border-l border-r border-gray-300 overflow-hidden">
-        <div className="flex justify-between items-center pb-2 border-b border-gray-400">
+      <div className="flex-1 p-3 flex flex-col overflow-hidden">
+        <div className="flex justify-between items-center pb-2">
           <h2 className="text-lg font-semibold">Compiler - main.{ext}</h2>
-          <button
-            onClick={handleExport}
-            className="bg-blue-500 text-white px-4 py-1 rounded-sm hover:bg-blue-600 transition"
-          >
-            Export
-          </button>
+          <div className="space-x-2">
+            <button
+              onClick={codeRunner}
+              className="bg-blue-700 text-white px-4 py-1 rounded hover:bg-blue-600 transition"
+            >
+              Run
+            </button>
+            <button
+              onClick={handleExport}
+              className="bg-blue-700 text-white px-4 py-1 rounded hover:bg-blue-600 transition"
+            >
+              Export
+            </button>
+          </div>
         </div>
 
         <textarea
-          className="flex-1 mt-2 w-full p-2 text-sm font-mono border border-gray-400 resize-none focus:outline-none overflow-auto no-scrollbar bg-white"
+          className="
+            flex-1 mt-2 w-full p-2 text-sm font-mono 
+            border border-gray-400 
+            resize-none focus:outline-none 
+            overflow-auto no-scrollbar 
+          "
           placeholder={`Write your ${language} code here...`}
           value={code}
           onChange={(e) => setCode(e.target.value)}
         />
       </div>
 
-      {/* Output Area */}
-      <div className="w-[35%] h-full p-3 flex flex-col border-l border-gray-300 overflow-hidden">
-        <div className="flex justify-between items-center pb-2 border-b border-gray-400">
+      <div className="w-[35%] p-3 flex flex-col overflow-hidden border-l  ">
+        {/* Output Area */}
+        <div className="flex justify-between items-center pb-2">
           <h2 className="text-lg font-semibold">Output</h2>
           <button
             onClick={handleClear}
-            className="bg-blue-500 text-white px-4 py-1 rounded-sm hover:bg-blue-600 transition"
+            className="bg-blue-700 text-white px-4 py-1  hover:bg-blue-600 transition"
           >
             Clear
           </button>
         </div>
 
-        <div className="flex-1 mt-2 p-2  border border-gray-400 text-sm font-mono overflow-auto no-scrollbar">
+        <div className="flex-1 mt-2 p-2  whitespace-pre-wrap font-mono  text-sm font-mono overflow-auto no-scrollbar rounded">
           {output || "Output will appear here..."}
+        </div>
+        {/* Input Area */}
+        {/* Input Area */}
+        <div className="flex flex-col h-[30%] border-t pt-2">
+          <div className="flex justify-between items-center pb-2">
+            <h2 className="text-lg font-semibold">Input</h2>
+            <button
+              onClick={() => setInput("")} // clears input field
+              className="bg-blue-700 text-white px-4 py-1 hover:bg-blue-600 transition rounded"
+            >
+              Clear
+            </button>
+          </div>
+
+          <textarea
+            className="flex-1 mt-2 p-2 border border-gray-500  whitespace-pre-wrap font-mono text-sm overflow-auto no-scrollbar focus:outline-none"
+            placeholder="Enter your input here..."
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+          />
         </div>
       </div>
     </div>

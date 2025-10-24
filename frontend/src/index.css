@@ -14,3 +14,25 @@
 .dark body {
   @apply bg-gray-900 text-white;
 }
+
+html, body {
+  height: 100%;
+  overflow-y: auto; /* allow scroll */
+  scrollbar-gutter: stable;
+}
+
+body::-webkit-scrollbar,
+html::-webkit-scrollbar {
+  display: none; /* Chrome, Safari */
+}
+
+body, html {
+  -ms-overflow-style: none;  /* IE/Edge */
+  scrollbar-width: none;     /* Firefox */
+}
+
+/* Prevent double scrollbars inside React root */
+#root {
+  overflow: visible !important;
+  height: auto !important;
+}
