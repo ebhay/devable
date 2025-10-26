@@ -1,6 +1,10 @@
 import React from "react";
+import { useState, useEffect } from "react";
+
 import { FaC } from "react-icons/fa6";
 import { Hash, Coffee } from "lucide-react";
+import Editor from "@monaco-editor/react";
+
 import {
   SiPython,
   SiJavascript,
@@ -101,6 +105,25 @@ function Compiler() {
     }
   };
 
+  const [editorTheme, setEditorTheme] = useState(
+  document.documentElement.classList.contains("dark") ? "vs-dark" : "vs"
+);
+
+useEffect(() => {
+  const observer = new MutationObserver(() => {
+    setEditorTheme(
+      document.documentElement.classList.contains("dark") ? "vs-dark" : "vs"
+    );
+  });
+
+  observer.observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ["class"],
+  });
+
+  return () => observer.disconnect();
+}, []);
+
   return (
     <div
       className="
@@ -152,16 +175,19 @@ function Compiler() {
           </div>
         </div>
 
-        <textarea
-          className="
-            flex-1 mt-2 w-full p-2 text-sm font-mono 
-            border border-gray-400 
-            resize-none focus:outline-none 
-            overflow-auto no-scrollbar 
-          "
-          placeholder={`Write your ${language} code here...`}
+        <Editor
+          height="100%"
+          defaultLanguage={ext}
+          language={ext}
+          theme={editorTheme} // 🔹 now reactive
           value={code}
-          onChange={(e) => setCode(e.target.value)}
+          onChange={(value) => setCode(value || "")}
+          options={{
+            fontSize: 14,
+            automaticLayout: true,
+            minimap: { enabled: false },
+            scrollBeyondLastLine: false,
+          }}
         />
       </div>
 
