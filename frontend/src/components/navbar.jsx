@@ -15,7 +15,6 @@ function Navbar() {
         </span>
       </Link>
 
-      {/* Navigation Links */}
       <div className="flex items-center space-x-4">
         <Link
           to="/"
@@ -55,10 +54,11 @@ function Navbar() {
         <Link to="/auth/signup">
           <InteractiveHoverButton>Get Started</InteractiveHoverButton>
         </Link>
-
-        {/* Theme Toggle */}
+        
         <AnimatedThemeToggler className="w-6 h-6 ml-2" />
+        
       </div>
+ 
     </nav>
   );
 }

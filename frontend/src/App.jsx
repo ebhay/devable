@@ -5,6 +5,7 @@ import Landing from "./pages/landing";
 import Navbar from "./components/navbar";
 import Compiler from "./pages/compiler";
 import Courses from "./pages/courses";
+import Footer from "./components/footer";
 
 function App() {
   const [lang, setlang] = useState("python3");
@@ -18,20 +19,19 @@ function App() {
             <Route
               path="/"
               element={
-                <div>
                   <Landing />
-                  <Landing />
-                  <Landing />
-                </div>
               }
             />
+          
             <Route path="/home" element={<h1>Home Page</h1>} />
             <Route path="/about" element={<h1>About Page</h1>} />
             <Route path="/courses" element={<Courses />} />
             <Route path="/compiler" element={<Compiler />} />
-            <Route path="*" element={<h1>404 Not Found</h1>} />
+              
+            <Route path="*" element={<h1 className="flex h-100 flex-col justify-center items-center">More Feature Under Build</h1>} />
           </Routes>
         </div>
+        <Footer />
       </BrowserRouter>
     </div>
   );
