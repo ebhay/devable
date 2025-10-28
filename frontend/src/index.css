@@ -36,3 +36,12 @@ body, html {
   overflow: visible !important;
   height: auto !important;
 }
+
+/* Google Sign-In Button Styles */
+div[id^="credential_picker_container"] iframe {
+  width: 100% !important;
+}
+
+div[id^="g_id_onload"] {
+  width: 100%;
+}
