@@ -1,41 +1,91 @@
-# devable
+# Devable 🚀
 
-Devable is a learning platform that includes an in-browser code playground (Compiler) which executes user code via the Piston execution API.
+**Devable** is a premium, distraction-free learning platform that transforms YouTube playlists into structured, trackable developer-grade courses. It features a built-in code compiler, progress tracking, and a high-performance UI designed for compounding skills.
 
-## Compiler — how it works
+![Devable Hero Image](https://image2url.com/r2/default/images/1769284812145-7a6ef516-f452-445c-a038-4d2f5a1e90a9.png)
 
-The Compiler page (`frontend/src/pages/compiler.jsx`) provides a small IDE-like UI with a Monaco editor, language selector, input area, and an output panel.
+## ✨ Features
 
-- Languages supported (UI): Java, Python3, C, C++, JavaScript, TypeScript, C#, Go, Rust
-- The editor file name is `main.<ext>` where `<ext>` is the extension mapped from the selected language.
+- **📺 YouTube Integration**: Instantly import any public or unlisted YouTube playlist as a structured course.
+- **💻 Built-in Compiler**: Practice coding directly within the platform with support for multiple languages.
+- **📊 Progress Tracking**: Automatically track watched lessons and visualize your progress with real-time statistics.
+- **🎯 Distraction-Free**: No recommendations, no ads, and no algorithm traps. Just focused learning.
+- **🛡️ Secure Auth**: seamless login with Credentials or Google OAuth 2.0.
+- **🎨 Premium UI**: Modern aesthetics using Inter font, Magic UI components, and perfect Dark Mode support.
 
-When you click Run the frontend sends a POST request to the Piston execution API:
+## 🛠️ Tech Stack
 
-- Endpoint used: `https://emkc.org/api/v2/piston/execute` (see `compiler.jsx`) 
-- Payload includes: language, version (`"*"`), files (single file `main.<ext>` with the editor contents) and `stdin` (from the Input textarea).
-- The API responds with execution details; the UI displays `result.run.output` (or a failure message).
+- **Framework**: [Next.js 15+](https://nextjs.org/) (App Router)
+- **Styling**: [Tailwind CSS v4](https://tailwindcss.com/)
+- **Database**: [MongoDB](https://www.mongodb.com/) (via [Prisma](https://www.prisma.io/))
+- **Auth**: [NextAuth.js](https://next-auth.js.org/)
+- **Components**: [Magic UI](https://magicui.design/), [Shadcn/UI](https://ui.shadcn.com/)
+- **Icons**: [Lucide React](https://lucide.dev/)
 
-Notes and configuration
+## 🚀 Getting Started
 
-- No backend is required for the Compiler feature — it runs entirely from the frontend and calls the public Piston API.
-- Because it uses a public remote execution service, consider rate limits and privacy implications (user code is sent to an external service).
-- To switch to a self-hosted Piston instance, update the fetch URL in `frontend/src/pages/compiler.jsx` to point to your Piston server (for example `https://your-piston-host/api/v2/execute`).
+### Prerequisites
 
-UX details
+- Node.js (v18 or higher)
+- pnpm / npm / yarn
+- A MongoDB database
 
-- Export: download the current editor contents as `main.<ext>`.
-- Input box: used as `stdin` for the execution.
-- Output: shows program stdout/stderr (or error messages). A `Clear` button empties the output.
-- Theme sync: the Monaco editor theme tracks the app's light/dark mode.
+### Installation
 
-Security & recommendations
+1. **Clone the repository:**
+   ```bash
+   git clone https://github.com/your-username/devable.git
+   cd devable
+   ```
 
-- Don't rely on the public Piston API for sensitive or production workloads — self-host Piston if you need isolation and control.
-- Add server-side rate-limiting or API keys on a proxy if you expect heavy usage.
+2. **Install dependencies:**
+   ```bash
+   pnpm install
+   ```
 
-Where to look in the code
+3. **Set up environment variables:**
+   Create a `.env` file in the root directory based on the `.env.example` provided.
 
-- Frontend compiler UI: `frontend/src/pages/compiler.jsx`
-- Monaco editor config: in the same file (monaco editor props)
+4. **Initialize Prisma:**
+   ```bash
+   npx prisma generate
+   npx prisma db push
+   ```
 
-If you'd like, I can add a README section showing how to self-host Piston and update the app to point to a configurable env var.
+5. **Run the development server:**
+   ```bash
+   pnpm dev
+   ```
+
+6. **Open in browser:**
+   Go to [http://localhost:3000](http://localhost:3000)
+
+## 🔑 Environment Variables
+
+To run this project, you will need to add the following environment variables to your `.env` file:
+
+```env
+# Database
+DATABASE_URL=your_mongodb_connection_string
+
+# NextAuth
+NEXTAUTH_URL=http://localhost:3000
+NEXTAUTH_SECRET=your_nextauth_secret
+
+# External APIs
+YOUTUBE_API_KEY=your_youtube_data_v3_api_key
+OPEN_ROUTER_KEY=your_open_router_key_for_ai_features
+MODEL=nvidia/nemotron-3-nano-30b-a3b:free
+
+# OAuth
+GOOGLE_CLIENT_ID=your_google_client_id
+GOOGLE_CLIENT_SECRET=your_google_client_secret
+```
+
+## 📝 License
+
+Distributed under the MIT License. See `LICENSE` for more information.
+
+---
+
+Built with ❤️ for developers who want to learn faster.
