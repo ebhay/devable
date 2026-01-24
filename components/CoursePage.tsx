@@ -1,0 +1,827 @@
+"use client";
+
+import { useEffect, useState, useRef } from "react";
+import {
+  MoreVertical,
+  Plus,
+  Maximize,
+  Minimize,
+  Share2,
+  Pencil,
+  Trash2,
+  Bookmark,
+  BookmarkCheck,
+  MessageSquare,
+  ListVideo,
+} from "lucide-react";
+import { toast } from "sonner";
+import Navbar from "./Navbar";
+import Image from "next/image";
+import { redirect, useRouter, useSearchParams } from "next/navigation";
+import EditCourseModal from "./EditCourse";
+import { Course, Lesson } from "@/types";
+import ShareCourseModal from "./ShareCourse";
+import AddLecture from "./AddLecture";
+import { useSession } from "next-auth/react";
+
+
+
+interface CourseLecturePageProps {
+  shareId: string;
+}
+
+type CourseWithLessons = Omit<Course, "completedLessons"> & {
+  lessons: Lesson[];
+  isSaved?: boolean;
+  completedLessons?: string[];
+};
+
+export default function CourseLecturePage({ shareId }: CourseLecturePageProps) {
+  const [course, setCourse] = useState<CourseWithLessons | null>(null);
+  const [openLessonMenu, setOpenLessonMenu] = useState<string | null>(null);
+  const [currentLesson, setCurrentLesson] = useState<Lesson | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [cinema, setCinema] = useState(false);
+  const [startAt, setStartAt] = useState(0);
+  const [open, setOpen] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
+  const [addOpen, setAddOpen] = useState(false);
+  const [descOpen, setDescOpen] = useState(false);
+
+  const menuRef = useRef<HTMLDivElement | null>(null);
+  const savingRef = useRef(false);
+
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  const session = useSession();
+
+  useEffect(() => {
+    if (!shareId) return;
+
+    const fetchCourse = async () => {
+      try {
+        setLoading(true);
+        const res = await fetch(`/api/course/getCourse?sId=${shareId}`);
+        const data = await res.json();
+
+        setCourse(data);
+        setCurrentLesson(data.lessons?.[0] || null);
+      } catch {
+        toast("Failed to load course");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCourse();
+  }, [shareId]);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setOpenLessonMenu(null);
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!course || !course.lessons) return;
+
+    // If currentLesson is null, select first uncompleted lesson
+    if (!currentLesson) {
+      const next = course.lessons.find(
+        (l) => !course.completedLessons?.includes(l.id)
+      );
+      setCurrentLesson(next || course.lessons[0]);
+      return;
+    }
+
+    // If the selected lesson is completed → auto-play the next uncompleted
+    if (course.completedLessons?.includes(currentLesson.id)) {
+      const next = course.lessons.find(
+        (l) => !course.completedLessons?.includes(l.id)
+      );
+      if (next && next.id !== currentLesson.id) {
+        setCurrentLesson(next);
+        setStartAt(0);
+      }
+    }
+  }, [course?.lessons]);
+
+  function toBaseCourse(course: CourseWithLessons): Course {
+    const { lessons, completedLessons, isSaved, ...baseCourse } = course;
+    return baseCourse as Course;
+  }
+
+  const handleDeleteCourse = async () => {
+    const confirmed = window.confirm(
+      "Are you sure you want to delete this course? This action cannot be undone."
+    );
+
+    if (!confirmed) return;
+
+    const courseId = course?.id;
+
+    try {
+      const res = await fetch(`/api/course/deleteCourse?courseId=${courseId}`, {
+        method: "DELETE",
+      });
+
+      if (!res.ok) {
+        throw new Error("Failed to delete course");
+      }
+
+      toast.success("The course has been removed successfully.");
+      setTimeout(() => {
+        redirect("/dashboard");
+      }, 1000);
+    } catch (error) {
+      console.log("Error occured while deleting:", error);
+      toast.error("Something went wrong while deleting the course.");
+    }
+  };
+
+  const handleDeleteLesson = async (courseId: string, lessonId: string) => {
+    const confirmed = window.confirm(
+      "Are you sure you want to delete this lesson? This action cannot be undone."
+    );
+
+    if (!confirmed) return;
+
+    try {
+      const res = await fetch(
+        `/api/lecture/delete?lessonId=${lessonId}&courseId=${courseId}`,
+        {
+          method: "DELETE",
+        }
+      );
+
+      if (!res.ok) {
+        throw new Error("Failed to delete course");
+      }
+
+      const data = await res.json();
+      setCourse((prev) =>
+        prev
+          ? {
+            ...prev,
+            lessons: prev.lessons.filter((lesson) => lesson.id !== lessonId),
+            totalVideos: Math.max(
+              (prev.totalVideos ?? prev.lessons.length) - 1,
+              0
+            ),
+          }
+          : prev
+      );
+      toast.success("The course has been removed successfully.");
+    } catch (error) {
+      console.error("Error occured while deleting:", error);
+      toast.error("Something went wrong while deleting the course.");
+    }
+  };
+
+  const handleLecturesAdded = (newLessons: Lesson[]) => {
+    console.log("Received new lessons:", newLessons); // Debug log
+
+    if (!Array.isArray(newLessons)) {
+      console.error("newLessons is not an array:", newLessons);
+      toast.error("Invalid lesson data received");
+      return;
+    }
+
+    setCourse((prev) =>
+      prev
+        ? {
+          ...prev,
+          lessons: [...prev.lessons, ...newLessons],
+          totalVideos:
+            (prev.totalVideos ?? prev.lessons.length) + newLessons.length,
+        }
+        : prev
+    );
+
+    if (!currentLesson && newLessons.length > 0) {
+      setCurrentLesson(newLessons[0]);
+    }
+  };
+
+  function timestampToSeconds(ts: string) {
+    const parts = ts.split(":").map(Number);
+
+    if (parts.length === 3) {
+      const [h, m, s] = parts;
+      return h * 3600 + m * 60 + s;
+    }
+
+    if (parts.length === 2) {
+      const [m, s] = parts;
+      return m * 60 + s;
+    }
+
+    return 0;
+  }
+
+  // Separate effect for handling redirect-back-after-login
+  useEffect(() => {
+    if (!course) return;
+
+    const shouldSave = searchParams.get("save");
+
+    if (
+      shouldSave === "1" &&
+      session.status === "authenticated" &&
+      session.data
+    ) {
+      // Remove query param immediately
+      router.replace(`/course/${shareId}`, { scroll: false });
+
+      // Perform the save
+      const performSave = async () => {
+        const prevState = course.isSaved;
+
+        // Don't save if already saved
+        if (prevState) return;
+
+        setCourse((prev) => (prev ? { ...prev, isSaved: true } : prev));
+
+        try {
+          const res = await fetch(`/api/course/save`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ courseId: course.id }),
+          });
+
+          if (!res.ok) throw new Error("Failed to save");
+
+          toast.success("Saved course!");
+        } catch (err) {
+          console.error("Save error:", err);
+          setCourse((prev) => (prev ? { ...prev, isSaved: prevState } : prev));
+          toast.error("Something went wrong");
+        }
+      };
+
+      performSave();
+    }
+  }, [
+    session.status,
+    session.data,
+    course?.id,
+    course?.isSaved,
+    shareId,
+    searchParams,
+    router,
+  ]);
+
+  // Simplified handleSaveCourse for manual button clicks
+  const handleSaveCourse = async () => {
+    if (!session.data) {
+      router.push(
+        `/login?callbackUrl=${encodeURIComponent(
+          `/course/${course?.shareId}?save=1`
+        )}`
+      );
+      return;
+    }
+
+    if (!course || savingRef.current) return;
+
+    savingRef.current = true;
+    const prevState = course.isSaved;
+
+    // optimistic toggle
+    setCourse((prev) => (prev ? { ...prev, isSaved: !prev.isSaved } : prev));
+
+    try {
+      let res;
+
+      if (prevState) {
+        // UNSAVE
+        res = await fetch(`/api/course/unsave?courseId=${course.id}`, {
+          method: "DELETE",
+        });
+      } else {
+        // SAVE
+        res = await fetch(`/api/course/save`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ courseId: course.id }),
+        });
+      }
+
+      if (!res.ok) throw new Error("Failed toggling save");
+
+      toast.success(prevState ? "Removed from saved" : "Saved course!");
+    } catch (err) {
+      console.error("Save error:", err);
+      // rollback
+      setCourse((prev) => (prev ? { ...prev, isSaved: prevState } : prev));
+      toast.error("Something went wrong");
+    } finally {
+      setTimeout(() => {
+        savingRef.current = false;
+      }, 500); // Reduced timeout
+    }
+  };
+
+  const toggleComplete = async (lessonId: string) => {
+    if (!session.data) {
+      router.push(
+        `/login?callbackUrl=${encodeURIComponent(`/course/${course?.shareId}`)}`
+      );
+      return;
+    }
+
+    if (!course) return;
+
+    const isCompleted = course.completedLessons?.includes(lessonId);
+
+    const prevList = course.completedLessons || [];
+
+    // optimistic UI update
+    setCourse((prev) =>
+      prev
+        ? {
+          ...prev,
+          completedLessons: isCompleted
+            ? prevList.filter((id) => id !== lessonId)
+            : [...prevList, lessonId],
+        }
+        : prev
+    );
+
+    try {
+      await fetch("/api/lecture/toggleComplete", {
+        method: "POST",
+        body: JSON.stringify({
+          lectureId: lessonId,
+          courseId: course.id,
+        }),
+      });
+    } catch (err) {
+      // rollback
+      setCourse((prev) =>
+        prev
+          ? {
+            ...prev,
+            completedLessons: prevList,
+          }
+          : prev
+      );
+
+      toast.error("Failed to update progress");
+    }
+  };
+
+  function parseDescription(text: string, onSeek: (seconds: number) => void) {
+    const regex = /(\b\d{1,2}:\d{2}(?::\d{2})?\b)|(https?:\/\/[^\s]+)/g;
+
+    const parts = text.split(regex);
+
+    return parts.map((part, i) => {
+      if (!part) return null;
+
+      // TIMESTAMP
+      if (/^\d{1,2}:\d{2}(:\d{2})?$/.test(part)) {
+        return (
+          <button
+            key={i}
+            onClick={() => onSeek(timestampToSeconds(part))}
+            className="text-indigo-500 hover:underline font-medium hover:cursor-pointer"
+          >
+            {part}
+          </button>
+        );
+      }
+
+      // LINK
+      if (part.startsWith("http")) {
+        return (
+          <a
+            key={i}
+            href={part}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-indigo-500 hover:underline break-all transition-colors duration-150 hover:cursor-pointer"
+          >
+            {part}
+          </a>
+        );
+      }
+
+      // NORMAL TEXT
+      return <span key={i}>{part}</span>;
+    });
+  }
+
+  if (loading) return <LectureSkeleton />;
+
+  if (!course) return <div className="p-8 text-white">Course not found</div>;
+
+  return (
+    <>
+      <div className="min-h-screen bg-white text-zinc-900 dark:bg-black dark:text-white">
+        <Navbar />
+
+        {/* CURRENT LESSON HEADER */}
+        {currentLesson && (
+          <div className="px-6 py-3 w-[95vw] max-w-[1600px] mx-auto">
+            <div className="bg-zinc-100 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 rounded-xl p-4">
+              <div className="flex items-center justify-between gap-4">
+                <h1 className="text-xl font-semibold flex-1">
+                  {currentLesson.title}
+                </h1>
+
+                <div className="flex items-center gap-3">
+                  {/* PROGRESS COUNT */}
+                  <span className="text-sm text-zinc-500 dark:text-zinc-400 whitespace-nowrap">
+                    {course.completedLessons?.length || 0} / {course.totalVideos} completed
+                  </span>
+
+                  {/* MARK COMPLETE BUTTON */}
+                  <button
+                    onClick={() => toggleComplete(currentLesson.id)}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition whitespace-nowrap ${course.completedLessons?.includes(currentLesson.id)
+                      ? "bg-green-600 text-white hover:bg-green-700"
+                      : "bg-blue-600 text-white hover:bg-blue-700"
+                      }`}
+                  >
+                    {course.completedLessons?.includes(currentLesson.id)
+                      ? "✓ Completed"
+                      : "Mark as Complete"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* MAIN CONTENT */}
+        <div
+          className={`w-[95vw] max-w-[1600px] mx-auto px-6 pb-12 ${cinema ? "space-y-8" : "grid lg:grid-cols-4 gap-8"
+            }`}
+        >
+          {/* VIDEO SECTION */}
+          <div
+            className={`space-y-6 ${cinema ? "lg:col-span-4" : "lg:col-span-3"
+              }`}
+          >
+            <div className="group relative bg-zinc-100 dark:bg-black rounded-xl overflow-hidden aspect-video shadow-xl">
+              {currentLesson ? (
+                <>
+                  <iframe
+                    key={startAt}
+                    src={`${currentLesson.embedUrl}?start=${startAt}&autoplay=1&modestbranding=1&rel=0&controls=1&showinfo=0`}
+                    allow="autoplay; fullscreen"
+                    allowFullScreen
+                    className="w-full h-full"
+                  />
+                </>
+              ) : (
+                <div className="flex items-center justify-center h-full text-zinc-500">
+                  No lecture selected
+                </div>
+              )}
+
+              {/* Cinema Mode Button */}
+              <div className="absolute top-4 left-4 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                <button
+                  onClick={() => setCinema(!cinema)}
+                  className="bg-white/80 dark:bg-black/70 
+           hover:bg-white dark:hover:bg-black/90
+           border border-zinc-200 dark:border-zinc-800
+           p-3 rounded-xl backdrop-blur-sm transition"
+                >
+                  {cinema ? <Minimize size={20} /> : <Maximize size={20} />}
+                </button>
+              </div>
+            </div>
+
+
+
+            {/* Description Section */}
+            {currentLesson && (
+              <div
+                className="bg-zinc-100 dark:bg-zinc-900/50
+                border border-zinc-200 dark:border-zinc-800
+                rounded-xl p-6 space-y-3 mt-4"
+              >
+                <div className="flex items-center justify-between">
+                  <h4 className="text-lg font-semibold">Description</h4>
+
+                  <button
+                    onClick={() => setDescOpen(!descOpen)}
+                    className="px-3 py-1.5 text-sm rounded-lg border 
+      border-zinc-300 dark:border-zinc-700 
+      hover:bg-zinc-200 dark:hover:bg-zinc-800
+      transition"
+                  >
+                    {descOpen ? "Hide ▲" : "Show ▼"}
+                  </button>
+                </div>
+
+                {descOpen && (
+                  <p className="text-zinc-600 dark:text-zinc-400 leading-relaxed whitespace-pre-wrap mt-2">
+                    {parseDescription(
+                      currentLesson.description || "No description available.",
+                      setStartAt
+                    )}
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* RIGHT SIDEBAR (LECTURES) */}
+          <div className={`flex flex-col h-[700px] ${cinema ? "hidden" : "lg:col-span-1"}`}>
+            {/* COURSE TITLE & ACTIONS */}
+            <div className="">
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="text-xl font-bold text-zinc-900 dark:text-white">
+                  {course.title}
+                </h2>
+                <div className="flex items-center gap-1">
+                  <IconButton label="Share" onClick={() => setShareOpen(true)}>
+                    <Share2 size={18} />
+                  </IconButton>
+
+                  {session.data?.user?.id !== course.authorId && (
+                    <IconButton label="Save" onClick={handleSaveCourse}>
+                      {course.isSaved ? (
+                        <BookmarkCheck size={18} className="text-indigo-500" />
+                      ) : (
+                        <Bookmark size={18} />
+                      )}
+                    </IconButton>
+                  )}
+
+                  <IconButton
+                    label="Edit"
+                    onClick={() => setOpen(true)}
+                    className={`${session.data?.user?.id == course.authorId ? "" : "hidden"}`}
+                  >
+                    <Pencil size={18} />
+                  </IconButton>
+
+                  <IconButton
+                    label="Delete"
+                    danger
+                    onClick={handleDeleteCourse}
+                    className={`${session.data?.user?.id == course.authorId ? "" : "hidden"}`}
+                  >
+                    <Trash2 size={18} />
+                  </IconButton>
+                </div>
+              </div>
+            </div>
+
+
+            {/* LECTURES LIST */}
+            <div
+              className="flex-1 overflow-y-auto space-y-4 
+                  bg-zinc-50 dark:bg-transparent
+                  rounded-xl p-4 border border-zinc-200 dark:border-zinc-800"
+            >
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-sm font-medium text-zinc-500">
+                  {course.lessons?.length ?? 0} Videos
+                </h3>
+                <button
+                  className={`group hover:bg-zinc-800 p-2 rounded-lg transition hover:text-white ${session.data?.user?.id == course.authorId ? "" : "hidden"
+                    }`}
+                  onClick={() => setAddOpen(true)}
+                >
+                  <Plus size={16} />
+                </button>
+              </div>
+
+              {(course.lessons?.length ?? 0) === 0 ? (
+                <div className="text-center py-12 text-zinc-500">
+                  No lectures yet. Click + to add one.
+                </div>
+              ) : (
+                <div className="grid gap-2">
+                  {course.lessons?.map((lesson) => {
+                    const isActive = lesson.id === currentLesson?.id;
+                    return (
+                      <div
+                        key={lesson.id}
+                        onClick={() => setCurrentLesson(lesson)}
+                        className={`flex gap-3 p-2 rounded-lg cursor-pointer transition ${isActive
+                          ? "bg-blue-500/10 dark:bg-blue-500/20 border-l-2 border-blue-500"
+                          : "hover:bg-zinc-100 dark:hover:bg-zinc-900"
+                          }`}
+                      >
+                        {/* MINI THUMBNAIL */}
+                        <div className="relative w-20 h-14 shrink-0 rounded overflow-hidden bg-zinc-200 dark:bg-zinc-800">
+                          <Image
+                            src={lesson.thumbnail || ""}
+                            alt={`${lesson.order + 1}`}
+                            fill
+                            className="object-cover"
+                          />
+                        </div>
+
+                        <div className="flex-1 min-w-0 flex flex-col justify-center">
+                          <p
+                            className={`font-medium text-xs leading-tight line-clamp-2 ${isActive
+                              ? "text-blue-600 dark:text-blue-400"
+                              : "text-zinc-800 dark:text-zinc-200"
+                              }`}
+                          >
+                            {lesson.title}
+                          </p>
+                        </div>
+
+                        {/* ACTION */}
+                        {session.data?.user?.id && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toggleComplete(lesson.id);
+                            }}
+                            className={`w-5 h-5 mt-1 rounded-full flex items-center justify-center shrink-0 transition ${course.completedLessons?.includes(lesson.id)
+                              ? "bg-green-500 text-white"
+                              : "border border-zinc-300 dark:border-zinc-600"
+                              }`}
+                          >
+                            {course.completedLessons?.includes(lesson.id) && (
+                              <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                                <polyline points="20 6 9 17 4 12" />
+                              </svg>
+                            )}
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+          </div>
+        </div>
+      </div>
+      <EditCourseModal
+        course={course ? toBaseCourse(course) : undefined}
+        isOpen={open}
+        onClose={() => setOpen(false)}
+        onUpdated={(updatedCourse) => {
+          setCourse((prev) =>
+            prev
+              ? {
+                ...prev,
+                ...updatedCourse,
+                lessons: prev.lessons,
+                completedLessons: prev.completedLessons,
+              }
+              : prev
+          );
+          setOpen(false);
+        }}
+      />
+      <ShareCourseModal
+        isOpen={shareOpen}
+        onClose={() => setShareOpen(false)}
+        shareId={shareId}
+      />
+      <AddLecture
+        isOpen={addOpen}
+        onClose={() => setAddOpen(false)}
+        courseId={course.id}
+        onCreated={handleLecturesAdded}
+      />
+    </>
+  );
+}
+
+function LectureSkeleton() {
+  return (
+    <div className="min-h-screen bg-zinc-50 dark:bg-black">
+      {/* Floating Navbar Skeleton */}
+      <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 w-[95vw] max-w-6xl">
+        <div className="flex items-center gap-3">
+          {/* Back button */}
+          <div className="h-12 w-12 rounded-xl bg-zinc-200 dark:bg-zinc-800 animate-pulse" />
+
+          {/* Navbar */}
+          <div
+            className="flex-1 h-14 rounded-2xl bg-white/80 dark:bg-zinc-900/80 
+                          border border-zinc-200 dark:border-zinc-800
+                          shadow-lg animate-pulse"
+          />
+        </div>
+      </div>
+
+      {/* Page Content */}
+      <div className="pt-28 px-6 max-w-7xl mx-auto grid lg:grid-cols-3 gap-8">
+        {/* LEFT: Video + Description */}
+        <div className="lg:col-span-2 space-y-6">
+          {/* Course title */}
+          <div className="h-7 w-72 bg-zinc-200 dark:bg-zinc-800 rounded animate-pulse" />
+
+          {/* Video player */}
+          <div className="aspect-video rounded-2xl bg-zinc-200 dark:bg-zinc-900 animate-pulse" />
+
+          {/* Description card */}
+          <div
+            className="rounded-2xl border border-zinc-200 dark:border-zinc-800
+                          bg-white dark:bg-zinc-900 p-6 space-y-4 animate-pulse"
+          >
+            <div className="h-5 w-2/3 bg-zinc-200 dark:bg-zinc-800 rounded" />
+            <div className="h-4 w-full bg-zinc-200 dark:bg-zinc-800 rounded" />
+            <div className="h-4 w-5/6 bg-zinc-200 dark:bg-zinc-800 rounded" />
+            <div className="h-4 w-4/6 bg-zinc-200 dark:bg-zinc-800 rounded" />
+          </div>
+        </div>
+
+        {/* RIGHT: Lecture List */}
+        <aside className="space-y-4">
+          {/* Lectures header */}
+          <div className="flex items-center justify-between">
+            <div className="h-5 w-32 bg-zinc-200 dark:bg-zinc-800 rounded animate-pulse" />
+            <div className="h-8 w-8 bg-zinc-200 dark:bg-zinc-800 rounded-lg animate-pulse" />
+          </div>
+
+          {/* Lecture items */}
+          <div className="space-y-3">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div
+                key={i}
+                className="flex gap-4 p-3 rounded-xl
+                           bg-white dark:bg-zinc-900
+                           border border-zinc-200 dark:border-zinc-800
+                           animate-pulse"
+              >
+                {/* Thumbnail */}
+                <div className="w-28 aspect-video rounded-lg bg-zinc-200 dark:bg-zinc-800" />
+
+                {/* Title */}
+                <div className="flex-1 space-y-2">
+                  <div className="h-4 w-5/6 bg-zinc-200 dark:bg-zinc-800 rounded" />
+                  <div className="h-3 w-3/6 bg-zinc-200 dark:bg-zinc-800 rounded" />
+                </div>
+
+                {/* Menu dots */}
+                <div className="h-6 w-6 bg-zinc-200 dark:bg-zinc-800 rounded-full" />
+              </div>
+            ))}
+          </div>
+        </aside>
+      </div>
+    </div>
+  );
+}
+
+function MenuItem({
+  label,
+  onClick,
+  danger = false,
+}: {
+  label: string;
+  onClick: () => void;
+  danger?: boolean;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={`w-full text-left px-4 py-3 text-sm transition ${danger ? "text-red-400 hover:bg-red-900/30" : "hover:bg-zinc-800"
+        }`}
+    >
+      {label}
+    </button>
+  );
+}
+
+export function IconButton({
+  children,
+  onClick,
+  label,
+  danger = false,
+  className = "",
+}: {
+  children: React.ReactNode;
+  onClick: () => void;
+  label: string;
+  danger?: boolean;
+  className?: string;
+}) {
+  return (
+    <button
+      aria-label={label}
+      onClick={onClick}
+      className={`p-2 rounded-lg transition flex items-center justify-center ${danger
+        ? "text-red-500 hover:bg-red-500/10"
+        : "text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+        } ${className}`}
+    >
+      {children}
+    </button>
+  );
+}

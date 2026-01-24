@@ -1,36 +1,91 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Devable 🚀
 
-## Getting Started
+**Devable** is a premium, distraction-free learning platform that transforms YouTube playlists into structured, trackable developer-grade courses. It features a built-in code compiler, progress tracking, and a high-performance UI designed for compounding skills.
 
-First, run the development server:
+![Devable Hero Image](https://image2url.com/r2/default/images/1769284812145-7a6ef516-f452-445c-a038-4d2f5a1e90a9.png)
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+## ✨ Features
+
+- **📺 YouTube Integration**: Instantly import any public or unlisted YouTube playlist as a structured course.
+- **💻 Built-in Compiler**: Practice coding directly within the platform with support for multiple languages.
+- **📊 Progress Tracking**: Automatically track watched lessons and visualize your progress with real-time statistics.
+- **🎯 Distraction-Free**: No recommendations, no ads, and no algorithm traps. Just focused learning.
+- **🛡️ Secure Auth**: seamless login with Credentials or Google OAuth 2.0.
+- **🎨 Premium UI**: Modern aesthetics using Inter font, Magic UI components, and perfect Dark Mode support.
+
+## 🛠️ Tech Stack
+
+- **Framework**: [Next.js 15+](https://nextjs.org/) (App Router)
+- **Styling**: [Tailwind CSS v4](https://tailwindcss.com/)
+- **Database**: [MongoDB](https://www.mongodb.com/) (via [Prisma](https://www.prisma.io/))
+- **Auth**: [NextAuth.js](https://next-auth.js.org/)
+- **Components**: [Magic UI](https://magicui.design/), [Shadcn/UI](https://ui.shadcn.com/)
+- **Icons**: [Lucide React](https://lucide.dev/)
+
+## 🚀 Getting Started
+
+### Prerequisites
+
+- Node.js (v18 or higher)
+- pnpm / npm / yarn
+- A MongoDB database
+
+### Installation
+
+1. **Clone the repository:**
+   ```bash
+   git clone https://github.com/your-username/devable.git
+   cd devable
+   ```
+
+2. **Install dependencies:**
+   ```bash
+   pnpm install
+   ```
+
+3. **Set up environment variables:**
+   Create a `.env` file in the root directory based on the `.env.example` provided.
+
+4. **Initialize Prisma:**
+   ```bash
+   npx prisma generate
+   npx prisma db push
+   ```
+
+5. **Run the development server:**
+   ```bash
+   pnpm dev
+   ```
+
+6. **Open in browser:**
+   Go to [http://localhost:3000](http://localhost:3000)
+
+## 🔑 Environment Variables
+
+To run this project, you will need to add the following environment variables to your `.env` file:
+
+```env
+# Database
+DATABASE_URL=your_mongodb_connection_string
+
+# NextAuth
+NEXTAUTH_URL=http://localhost:3000
+NEXTAUTH_SECRET=your_nextauth_secret
+
+# External APIs
+YOUTUBE_API_KEY=your_youtube_data_v3_api_key
+OPEN_ROUTER_KEY=your_open_router_key_for_ai_features
+MODEL=nvidia/nemotron-3-nano-30b-a3b:free
+
+# OAuth
+GOOGLE_CLIENT_ID=your_google_client_id
+GOOGLE_CLIENT_SECRET=your_google_client_secret
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## 📝 License
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Distributed under the MIT License. See `LICENSE` for more information.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+---
 
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Built with ❤️ for developers who want to learn faster.
